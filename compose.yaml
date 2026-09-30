@@ -1,0 +1,30 @@
+services:
+  dnsmasq:
+    build: ./dnsmasq
+    container_name: dnsmasq
+    # DHCP を配り、ホストの iptables を操作するため host ネットワークで動かす
+    network_mode: host
+    cap_add:
+      - NET_ADMIN
+      - NET_BIND_SERVICE
+    environment:
+      - TZ=Asia/Tokyo
+    volumes:
+      - ./dnsmasq/dnsmasq.conf:/etc/dnsmasq.conf:ro
+      - ./dnsmasq/conf.d:/etc/dnsmasq.d:ro
+      - ./data/dns/log:/var/log/dnsmasq
+      - ./data/dns/leases:/var/lib/misc
+    restart: unless-stopped
+
+  # カメラのクラウド接続を本物のクラウドへ中継する。
+  # dnsmasq がカメラの接続先をこのサーバーに向けているため、
+  # 止めるとカメラはクラウドへつながらなくなる。
+  camera-proxy:
+    image: nginx:alpine
+    container_name: camera-proxy
+    restart: unless-stopped
+    ports:
+      - "192.168.1.10:443:443"
+    volumes:
+      - ./proxy/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./data/proxy-log:/var/log/nginx
